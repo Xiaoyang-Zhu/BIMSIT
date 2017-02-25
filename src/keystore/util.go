@@ -1,4 +1,4 @@
-package hdwallet
+package keystore
 
 import (
     "crypto/sha256"

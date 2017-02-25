@@ -1,4 +1,4 @@
-package hdwallet
+package keystore
 
 import (
     "bytes"
@@ -27,20 +27,20 @@ func init() {
     TestPrivate,_ = hex.DecodeString("04358394")
 }
 
-// HDWallet defines the components of a hierarchical deterministic wallet
-type HDWallet struct {
-    Vbytes []byte //4 bytes
-    Depth uint16 //1 byte
-    Fingerprint []byte //4 bytes
-    I []byte //4 bytes
-    Chaincode []byte //32 bytes
-    Key []byte //33 bytes
+// EXTKeys defines the components of a hierarchical deterministic wallet: 78 Bytes
+type EXTKeys struct {
+    Vbytes []byte //4 bytes: version bytes (mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private)
+    Depth uint16 //1 byte: depth: 0x00 for master nodes, 0x01 for level-1 derived keys, ....
+    Fingerprint []byte //4 bytes: the fingerprint of the parent's key (0x00000000 if master key)
+    I []byte //4 bytes: child number
+    Chaincode []byte //32 bytes: the chain code
+    Key []byte //33 bytes: the public key or private key data
 }
 
 // Child returns the ith child of wallet w. Values of i >= 2^31
 // signify private key derivation. Attempting private key derivation
 // with a public key will throw an error.
-func (w *HDWallet) Child(i uint32) (*HDWallet,error) {
+func (w *EXTKeys) Child(i uint32) (*EXTKeys,error) {
     var fingerprint, I , newkey []byte
     switch {
     case bytes.Compare(w.Vbytes, Private) == 0, bytes.Compare(w.Vbytes, TestPrivate) == 0:
@@ -54,7 +54,7 @@ func (w *HDWallet) Child(i uint32) (*HDWallet,error) {
         I = mac.Sum(nil)
          iL := new(big.Int).SetBytes(I[:32])
         if iL.Cmp(curve.N) >= 0 || iL.Sign() == 0 {
-            return &HDWallet{}, errors.New("Invalid Child")
+            return &EXTKeys{}, errors.New("Invalid Child")
         }
         newkey = addPrivKeys(I[:32], w.Key)
         fingerprint = hash160(privToPub(w.Key))[:4]
@@ -62,22 +62,22 @@ func (w *HDWallet) Child(i uint32) (*HDWallet,error) {
     case bytes.Compare(w.Vbytes, Public) == 0, bytes.Compare(w.Vbytes, TestPublic) == 0:
         mac := hmac.New(sha512.New, w.Chaincode)
         if i >= uint32(0x80000000) {
-            return &HDWallet{}, errors.New("Can't do Private derivation on Public key!")
+            return &EXTKeys{}, errors.New("Can't do Private derivation on Public key!")
         }
         mac.Write(append(w.Key,uint32ToByte(i)...))
         I = mac.Sum(nil)
         iL := new(big.Int).SetBytes(I[:32])
         if iL.Cmp(curve.N) >= 0 || iL.Sign() == 0 {
-            return &HDWallet{}, errors.New("Invalid Child")
+            return &EXTKeys{}, errors.New("Invalid Child")
         }
         newkey = addPubKeys(privToPub(I[:32]), w.Key)
         fingerprint = hash160(w.Key)[:4]
     }
-    return &HDWallet{w.Vbytes, w.Depth + 1, fingerprint, uint32ToByte(i), I[32:], newkey}, nil
+    return &EXTKeys{w.Vbytes, w.Depth + 1, fingerprint, uint32ToByte(i), I[32:], newkey}, nil
 }
 
 // Serialize returns the serialized form of the wallet.
-func (w *HDWallet) Serialize() []byte  {
+func (w *EXTKeys) Serialize() []byte  {
     depth := uint16ToByte(uint16(w.Depth % 256))
     //bindata = vbytes||depth||fingerprint||i||chaincode||key
     bindata := append(w.Vbytes,append(depth,append(w.Fingerprint,append(w.I,append(w.Chaincode,w.Key...)...)...)...)...)
@@ -86,18 +86,18 @@ func (w *HDWallet) Serialize() []byte  {
 }
 
 // String returns the base58-encoded string form of the wallet.
-func (w *HDWallet) String() string  {
+func (w *EXTKeys) String() string  {
     return base58.Encode(w.Serialize())
 }
 
 // StringWallet returns a wallet given a base58-encoded extended key
-func StringWallet(data string) (*HDWallet,error) {
+func StringWallet(data string) (*EXTKeys,error) {
     dbin := base58.Decode(data)
     if err := ByteCheck(dbin); err != nil {
-        return &HDWallet{}, err
+        return &EXTKeys{}, err
     }
     if bytes.Compare(dblSha256(dbin[:(len(dbin)-4)])[:4], dbin[(len(dbin)-4):]) != 0 {
-        return &HDWallet{}, errors.New("Invalid checksum")
+        return &EXTKeys{}, errors.New("Invalid checksum")
     }
     vbytes := dbin[0:4]
     depth := byteToUint16(dbin[4:5])
@@ -105,16 +105,16 @@ func StringWallet(data string) (*HDWallet,error) {
     i := dbin[9:13]
     chaincode := dbin[13:45]
     key := dbin[45:78]
-    return &HDWallet{vbytes, depth, fingerprint, i, chaincode, key}, nil
+    return &EXTKeys{vbytes, depth, fingerprint, i, chaincode, key}, nil
 }
 
 // Pub returns a new wallet which is the public key version of w.
 // If w is a public key, Pub returns a copy of w
-func (w *HDWallet) Pub() *HDWallet {
+func (w *EXTKeys) Pub() *EXTKeys {
     if bytes.Compare(w.Vbytes,Public) == 0 {
-        return &HDWallet{w.Vbytes, w.Depth, w.Fingerprint, w.I, w.Chaincode, w.Key}
+        return &EXTKeys{w.Vbytes, w.Depth, w.Fingerprint, w.I, w.Chaincode, w.Key}
     } else {
-        return &HDWallet{Public, w.Depth, w.Fingerprint, w.I, w.Chaincode, privToPub(w.Key)}
+        return &EXTKeys{Public, w.Depth, w.Fingerprint, w.I, w.Chaincode, privToPub(w.Key)}
     }
 }
 
@@ -144,7 +144,7 @@ func StringAddress(data string) (string, error) {
 }
 
 // Address returns bitcoin address represented by wallet w.
-func (w *HDWallet) Address() string {
+func (w *EXTKeys) Address() string {
     x, y := expand(w.Key)
     four,_ := hex.DecodeString("04")
     padded_key := append(four,append(x.Bytes(),y.Bytes()...)...)
@@ -171,7 +171,7 @@ func GenSeed(length int) ([]byte, error) {
 }
 
 // MasterKey returns a new wallet given a random seed.
-func MasterKey(seed []byte) *HDWallet {
+func MasterKey(seed []byte) *EXTKeys {
     key := []byte("Bitcoin seed")
     mac := hmac.New(sha512.New, key)
     mac.Write(seed)
@@ -179,10 +179,10 @@ func MasterKey(seed []byte) *HDWallet {
     secret := I[:len(I)/2]
     chain_code := I[len(I)/2:]
     depth := 0
-    i := make([]byte, 4)
+    i := make([]byte, 4) //2^32 children
     fingerprint := make([]byte, 4)
     zero := make([]byte,1)
-    return &HDWallet{Private,uint16(depth),fingerprint,i,chain_code,append(zero,secret...)}
+    return &EXTKeys{Private,uint16(depth),fingerprint,i,chain_code,append(zero,secret...)}
 }
 
 // StringCheck is a validation check of a base58-encoded extended key.
