@@ -22,7 +22,8 @@ type HIDS struct {
 type Keystore struct {
 //	secret string
 	seed []byte // Seed
-	masterKeys []byte //Combination of master and m/0': the extended private keys <privKey, chaincode>
+	masterKeys []byte //Master keys: the extended private keys <privKey, chaincode>
+	masterChildKeys []byte //Master child keys: m/0' the extended private keys <privKey, chaincode>
 	idData []HIDS // All identity info
 }
 
@@ -40,11 +41,21 @@ func (i *IDInfo) GenerateSingleIDInfo () (){
 }
 
 func  NewKeystore (parentalID *IDInfo) *Keystore {
+	switch {
+	case parentalID == nil:
 
+	case parentalID != nil:
+
+	}
 	return &Keystore{}
 }
 
 func (k *Keystore) GenerateSeed (length int) () {
-	fmt.Printf("haha")
+	//scan user input to set the length of seed
+	seed, err := GenSeed(256)
+	if err != nil {
+		fmt.Errorf("%s should have been nil",err.Error())
+	}
+	fmt.Println(seed)
 }
 
