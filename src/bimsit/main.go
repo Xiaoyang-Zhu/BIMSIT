@@ -29,7 +29,8 @@ func main() {
 		fmt.Println(*ks)
 
 		//serialize the keystore struct
-		
+		fmt.Printf("The New Online ID extended private key is:\n%s\n", ks)
+
 	}
 
 	defer inputFile.Close()
