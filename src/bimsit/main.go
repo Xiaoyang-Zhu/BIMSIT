@@ -28,6 +28,8 @@ func main() {
 		//check the content of the generated keystore
 		fmt.Println(*ks)
 
+		//serialize the keystore struct
+
 	}
 
 	defer inputFile.Close()
