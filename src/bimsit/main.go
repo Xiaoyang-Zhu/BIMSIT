@@ -29,7 +29,7 @@ func main() {
 		fmt.Println(*ks)
 
 		//serialize the keystore struct
-
+		
 	}
 
 	defer inputFile.Close()

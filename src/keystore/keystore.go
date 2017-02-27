@@ -3,6 +3,7 @@ package keystore
 import (
 	"fmt"
 	"strconv"
+	"btcsuite/btcutil/base58"
 )
 
 //Single identity information
@@ -70,6 +71,29 @@ func  NewKeystore(length int) *Keystore {
 }
 
 
+// String and Serialized functions: Converting keystore struct to string so that ID info could be stored in keystore file
+// String returns the base58-encoded string form of the keystore.
+func (ks *Keystore) String() string  {
+	return base58.Encode(ks.Serialize())
+}
+
+// Serialize returns the serialized form of the keystore.
+func (ks *Keystore) Serialize() []byte  {
+	depth := uint16ToByte(uint16(w.Depth % 256))
+	//bindata = vbytes||depth||fingerprint||i||chaincode||key
+	mk := *ks.masterKeys
+	mck := *ks.masterChildKeys
+	masterkeysdata := append(mk.Vbytes,append(depth,append(mk.Fingerprint,append(mk.I,append(mk.Chaincode,mk.Key...)...)...)...)...)
+	masterchildkeysdata := append(mck.Vbytes,append(depth,append(mck.Fingerprint,append(mck.I,append(mck.Chaincode,mck.Key...)...)...)...)...)
+
+	streamdata := append(ks.seed,append(masterkeysdata, append(masterchildkeysdata, append())) )
+	bindata := append(w.Vbytes,append(depth,append(w.Fingerprint,append(w.I,append(w.Chaincode,w.Key...)...)...)...)...)
+	chksum := dblSha256(bindata)[:4]
+	return append(bindata,chksum...)
+}
+
+
+// Generate Single ID information
 func NewHIDS(index uint32, pathway string, childrenNum int, parentalEXTKeys *EXTKeys) *HIDS {
 	//String operation: turn m/0' into m/0'/childrenNum-1
 	childpathway := pathway + "/" + strconv.Itoa(childrenNum - 1)
