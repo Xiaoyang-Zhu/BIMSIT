@@ -28,6 +28,13 @@ func main() {
 		fmt.Println(string(data))
 
 		//Convert the file string content into keystore struct
+		//func StringKeystore(data string) (*Keystore,error)
+		ks, err := keystore.StringKeystore(string(data))
+		if err != nil {
+			fmt.Println("Errors in StringKeystore")
+			return
+		}
+		fmt.Println(ks.Serialize())
 
 		//List all identities tree-like structure and choose one as the parental identity
 
@@ -37,7 +44,7 @@ func main() {
 		fmt.Printf("Cannot load the Keystore file!\n" + "Building a new one!\n")
 
 		//Fetch the seed length from client then generate the seed: assuming length is 256 bits
-		ks := keystore.NewKeystore(256)
+		ks := keystore.NewKeystore(256) //256 bits: 32 bytes
 
 		//check the content of the generated keystore
 		fmt.Println(*ks)

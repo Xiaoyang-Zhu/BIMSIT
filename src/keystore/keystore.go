@@ -5,6 +5,7 @@ import (
 	"btcsuite/btcutil/base58"
 	"bytes"
 	"errors"
+	"encoding/binary"
 )
 
 //Single identity information
@@ -95,11 +96,15 @@ func (ks *Keystore) Serialize() []byte  {
 //ChildrenNum	uint32
 func (hids *HIDS) Serialize() []byte {
 	var bsiddata []byte
+	var idnum uint32
 	for key, value := range hids.SIDData {
 //		fmt.Printf("%d : %s\n", key, value)
 		bkey := []byte(key)
+		bkeylen := uint32ToByte(uint32(len(bkey)))
 		bvalue := value.Serialize()
-		bsiddata = append(bkey, bvalue...)
+		bvaluelen := uint32ToByte(uint32(len(bvalue)))
+		idnum = idnum + 1
+		bsiddata = append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
 	}
 	bchildren := uint32ToByte(uint32(hids.index))
 
@@ -111,12 +116,17 @@ func (hids *HIDS) Serialize() []byte {
 //Credentials []EXTKeys
 //ChildrenNum uint32
 func (idinfo *IDInfo) Serialize() []byte {
-	return append(idinfo.Identifier, append(idinfo.Credentials[0].Serialize(), append(idinfo.Credentials[1].Serialize(), uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)
+	credoffine := idinfo.Credentials[0].Serialize()
+	credoffinelen := uint32ToByte(uint32(len(credoffine)))
+	credonline := idinfo.Credentials[0].Serialize()
+	credonlinelen := uint32ToByte(uint32(len(credonline)))
+	return append(idinfo.Identifier, append(credoffinelen, append(credoffine, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
 }
 
 
 // StringKeystore returns a Keystore struct given a base58-encoded string
 func StringKeystore(data string) (*Keystore,error) {
+	//BASE58 Decoding and check checksum value
 	ks := base58.Decode(data)
 	if err := ByteCheck(ks); err != nil {
 		return &Keystore{}, err
@@ -124,14 +134,107 @@ func StringKeystore(data string) (*Keystore,error) {
 	if bytes.Compare(dblSha256(ks[:(len(ks)-4)])[:4], ks[(len(ks)-4):]) != 0 {
 		return &Keystore{}, errors.New("Invalid checksum")
 	}
-	seedlen := ks[0:4]
-	
-	depth := byteToUint16(dbin[4:5])
-	fingerprint := dbin[5:9]
-	i := dbin[9:13]
-	chaincode := dbin[13:45]
-	key := dbin[45:78]
-	return &Keystore{vbytes, depth, fingerprint, i, chaincode, key}, nil
+
+	//Obtain seed
+	seedlen := binary.BigEndian.Uint32(ks[0:4])
+	seed := ks[4:4 + seedlen]
+
+	//Obtain masterkey and masterchildkey
+	mklen := binary.BigEndian.Uint32(ks[4 + seedlen:8 + seedlen])
+	mkstr := ks[8 + seedlen:8 + seedlen + mklen]
+	mcklen := binary.BigEndian.Uint32(ks[8 + seedlen + mklen:16 + seedlen + mklen])
+	mckstr := ks[16 + seedlen + mklen:16 + seedlen + mklen + mcklen]
+
+	//Obtain identity information string
+	iddatalen := binary.BigEndian.Uint32(ks[16 + seedlen + mklen + mcklen:24 + seedlen + mklen + mcklen])
+	iddatastr := ks[24 + seedlen + mklen + mcklen:24 + seedlen + mklen + mcklen + iddatalen]
+
+	mk, err := DeserializeEXTKeys(mkstr)
+	if err != nil {
+		fmt.Println("Errors in analyzing master keys")
+		return &Keystore{}, err
+	}
+	mck, err := DeserializeEXTKeys(mckstr)
+	if err != nil {
+		fmt.Println("Errors in analyzing master child keys")
+		return &Keystore{}, err
+	}
+
+	iddata, err := DeserializeHIDS(iddatastr)
+	if err != nil {
+		fmt.Println("Errors in analyzing HIDS struct")
+		return &Keystore{}, err
+	}
+	return &Keystore{seed, mk, mck, *iddata}, nil
+}
+
+// StringWallet returns a wallet given a base58-encoded extended key
+func DeserializeEXTKeys(extkeystr []byte) (*EXTKeys,error) {
+	vbytes := extkeystr[0:4]
+	depth := byteToUint16(extkeystr[4:5])
+	fingerprint := extkeystr[5:9]
+	i := extkeystr[9:13]
+	chaincode := extkeystr[13:45]
+	key := extkeystr[45:78]
+	return &EXTKeys{vbytes, depth, fingerprint, i, chaincode, key}, nil
+}
+
+func DeserializeHIDS(hids []byte) (*HIDS, error) {
+
+	var base uint32
+	idnum := binary.BigEndian.Uint32(hids[0:4])
+	SIDData := make(map[string] *IDInfo)
+
+	for idnum > 0 {
+		pathstrlen := binary.BigEndian.Uint32(hids[4 + base:8 + base])
+		pathstrb := hids[8 + base:8 + pathstrlen + base]
+		idinfostrlen := binary.BigEndian.Uint32(hids[8 + pathstrlen + base:12 + pathstrlen + base])
+		idinfostr := hids[12 + pathstrlen + base: 12 + pathstrlen + idinfostrlen + base]
+		idinfo, err := DeserializeIDInfo(idinfostr)
+		if err != nil {
+			fmt.Println("Errors in analyzing identity structure")
+			return &HIDS{}, err
+		}
+
+		//Convert []byte type pathway into pathway string
+		pathstr := string(pathstrb[:pathstrlen])
+		SIDData[pathstr] = idinfo
+		base = base + 16 + pathstrlen + idinfostrlen
+
+		idnum--
+	}
+
+
+	index := binary.BigEndian.Uint32(hids[:4])
+
+	return &HIDS{SIDData, index}, nil
+}
+
+func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
+	//Get identifier
+	identifier := idinfostr[0:20]
+
+	//Get offline and online credentials
+	credofflinelen := binary.BigEndian.Uint32(idinfostr[20:24])
+	credofflinestr := idinfostr[24:24 + credofflinelen]
+	credoffline, err := DeserializeEXTKeys(credofflinestr)
+	if err != nil {
+		fmt.Println("Errors in analyzing master child keys")
+		return &IDInfo{}, err
+	}
+	credonlinelen := binary.BigEndian.Uint32(idinfostr[24 + credofflinelen:28 + credofflinelen])
+	credonlinestr := idinfostr[28 + credofflinelen:28 + credofflinelen + credonlinelen]
+	credonline, err := DeserializeEXTKeys(credonlinestr)
+	if err != nil {
+		fmt.Println("Errors in analyzing master child keys")
+		return &IDInfo{}, err
+	}
+	//Get children number
+	childrenNum := binary.BigEndian.Uint32(idinfostr[28 + credofflinelen + credonlinelen:32 + credofflinelen + credonlinelen])
+	credentials :=[]EXTKeys{*credoffline, *credonline}
+
+	return &IDInfo{identifier, credentials, childrenNum}, nil
+
 }
 
 // Generate Single ID information
