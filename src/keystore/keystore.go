@@ -88,7 +88,7 @@ func (ks *Keystore) Serialize() []byte  {
 func (hids *HIDS) Serialize() []byte {
 	var bsiddata []byte
 	for key, value := range hids.SIDData {
-		fmt.Printf("%d : %s\n", key, value)
+//		fmt.Printf("%d : %s\n", key, value)
 		bkey := []byte(key)
 		bvalue := value.Serialize()
 		bsiddata = append(bkey, bvalue...)
