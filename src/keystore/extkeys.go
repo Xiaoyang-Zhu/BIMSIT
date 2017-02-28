@@ -161,7 +161,7 @@ func (w *EXTKeys) Address() string {
 
 // GenSeed returns a random seed with a length measured in bytes.
 // The length must be at least 128.
-func GenSeed(length int) ([]byte, error) {
+func GenSeed(length uint16) ([]byte, error) {
     b := make([]byte, length)
     if length < 128 {
         return b, errors.New("length must be at least 128 bits")

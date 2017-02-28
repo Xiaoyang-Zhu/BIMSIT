@@ -3,6 +3,8 @@ package keystore
 import (
 	"fmt"
 	"btcsuite/btcutil/base58"
+	"bytes"
+	"errors"
 )
 
 //Single identity information
@@ -25,8 +27,8 @@ type HIDS struct {
 type Keystore struct {
 //	secret string
 	seed []byte // Seed
-	masterKeys *EXTKeys //Master keys: the extended private keys <privKey, chaincode>
-	masterChildKeys *EXTKeys //Master child keys: m/0' the extended private keys <privKey, chaincode>
+	masterKeys *EXTKeys //Master keys: the extended private keys <privKey, chaincode> serialized string 78 Bytes
+	masterChildKeys *EXTKeys //Master child keys: m/0' the extended private keys <privKey, chaincode> serialized string 78 Bytes
 	idData HIDS // All identity info
 }
 
@@ -38,7 +40,7 @@ type OHIDS struct {
 }
 
 
-func  NewKeystore(length int) *Keystore {
+func  NewKeystore(length uint16) *Keystore {
 
 	seed, err := GenSeed(length)
 	if err != nil {
@@ -76,14 +78,20 @@ func (ks *Keystore) Serialize() []byte  {
 	//streamdata = seed||masterkeys||masterchildkeys||array of HIDS
 	mk := ks.masterKeys.Serialize()
 	mck := ks.masterChildKeys.Serialize()
-
-	streamdata := append(ks.seed, append(mk, append(mck, ks.idData.Serialize()...)...)...)
+	idata := ks.idData.Serialize()
+	seedlen := uint32ToByte(uint32(len(ks.seed)))
+	mklen := uint32ToByte(uint32(len(mk)))
+	mcklen := uint32ToByte(uint32(len(mck)))
+	idatalen := uint32ToByte(uint32(len(idata)))
+	fmt.Println("The bytes number of seed/masterkey/masterchildkey/idata:", seedlen, mklen, mcklen, idatalen)
+	streamdata := append(seedlen, append(ks.seed, append(mklen, append(mk, append(mcklen, append(mck, append(idatalen, idata...)...)...)...)...)...)...)
+//	streamdata := append(ks.seed, append(mk, append(mck, idata...)...)...)
 	chksum := dblSha256(streamdata)[:4]
 	return append(streamdata,chksum...)
 }
 
 
-//SIDData map[string] *IDInfo //string stands for the pathway of identity
+//SIDData map[string] *IDInfo
 //ChildrenNum	uint32
 func (hids *HIDS) Serialize() []byte {
 	var bsiddata []byte
@@ -99,13 +107,32 @@ func (hids *HIDS) Serialize() []byte {
 
 
 }
-//Identifier []byte //160 bytes
+//Identifier []byte
 //Credentials []EXTKeys
-//ChildrenNum //uint32
+//ChildrenNum uint32
 func (idinfo *IDInfo) Serialize() []byte {
 	return append(idinfo.Identifier, append(idinfo.Credentials[0].Serialize(), append(idinfo.Credentials[1].Serialize(), uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)
 }
 
+
+// StringKeystore returns a Keystore struct given a base58-encoded string
+func StringKeystore(data string) (*Keystore,error) {
+	ks := base58.Decode(data)
+	if err := ByteCheck(ks); err != nil {
+		return &Keystore{}, err
+	}
+	if bytes.Compare(dblSha256(ks[:(len(ks)-4)])[:4], ks[(len(ks)-4):]) != 0 {
+		return &Keystore{}, errors.New("Invalid checksum")
+	}
+	seedlen := ks[0:4]
+	
+	depth := byteToUint16(dbin[4:5])
+	fingerprint := dbin[5:9]
+	i := dbin[9:13]
+	chaincode := dbin[13:45]
+	key := dbin[45:78]
+	return &Keystore{vbytes, depth, fingerprint, i, chaincode, key}, nil
+}
 
 // Generate Single ID information
 func NewHIDS(index uint32, pathway string, childrenNum uint32, parentalEXTKeys *EXTKeys) *HIDS {
