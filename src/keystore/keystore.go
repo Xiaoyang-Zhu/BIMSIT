@@ -281,6 +281,16 @@ func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
 }
 
 
+/* Keystore Struct Operation Functions */
+
+// String returns the base58-encoded string form of the keystore.
+func (ks *Keystore) ListAllIDPath() {
+	fmt.Println("Identities' path:\n")
+	for key, _ := range ks.idData.SIDData {
+		fmt.Printf("%s\n", key)
+	}
+	return
+}
 
 
 

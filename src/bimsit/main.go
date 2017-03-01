@@ -37,7 +37,7 @@ func main() {
 		fmt.Println(ks.Serialize())
 
 		//List all identities tree-like structure and choose one as the parental identity
-
+		ks.ListAllIDPath()
 
 
 	} else {
