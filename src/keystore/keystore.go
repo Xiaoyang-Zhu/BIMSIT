@@ -8,6 +8,8 @@ import (
 	"encoding/binary"
 )
 
+/* Basic Struct Definition */
+
 //Single identity information
 type IDInfo struct {
 	Identifier []byte //160 bytes
@@ -40,6 +42,7 @@ type OHIDS struct {
 //	description string
 }
 
+/* Three Keystore Struct Global Constructor: NewKeystore, NewHIDS and NewIDInfo*/
 
 func  NewKeystore(length uint16) *Keystore {
 
@@ -67,8 +70,46 @@ func  NewKeystore(length uint16) *Keystore {
 	return &Keystore{seed, extpriv_master, extpriv_masterchild, *idData}
 }
 
+// Generate Single ID information
+func NewHIDS(index uint32, pathway string, childrenNum uint32, parentalEXTKeys *EXTKeys) *HIDS {
+	//String operation: turn m/0' into m/0'/childrenNum-1
+	childpathway := pathway + "/0"
 
-// String and Serialized functions: Converting keystore struct to string so that ID info could be stored in keystore file
+	SIDData := make(map[string] *IDInfo)
+	SIDData[childpathway] = NewIDInfo(index, parentalEXTKeys)
+
+	//Need to modify the number of children
+	return &HIDS{SIDData, childrenNum - 1}
+}
+
+//Using index number and the parental extended keys to encapsulate a single identity
+func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
+	// Offline extended private keys
+	childEXTPrivF, err := parentalEXTKeys.Child(index)
+	if err != nil {
+		fmt.Errorf("%s should have been nil",err.Error())
+	}
+	fmt.Printf("The New Offline ID extended private key is:\n%s\n", childEXTPrivF)
+	//Online extended private keys
+	childEXTPrivOn, err := parentalEXTKeys.Child(index + uint32(0x80000000))
+	if err != nil {
+		fmt.Errorf("%s should have been nil",err.Error())
+	}
+	fmt.Printf("The New Online ID extended private key is:\n%s\n", childEXTPrivOn)
+
+	// Convert the offline private key to public key and derive the identitifer
+	extpub := childEXTPrivF.Pub()
+	identifier := hash160(privToPub(extpub.Key))
+	fmt.Printf("The New ID identifier is:\n%d\n", identifier)
+
+	//Assembly the online and offline extended private keys
+	credentials := []EXTKeys{*childEXTPrivF, *childEXTPrivOn}
+
+	return &IDInfo{identifier, credentials, 0}
+}
+
+/* Four Keystore Struct Serializing Functions: Converting keystore struct into string so that ID info could be stored in keystore file */
+
 // String returns the base58-encoded string form of the keystore.
 func (ks *Keystore) String() string  {
 	return base58.Encode(ks.Serialize())
@@ -91,9 +132,6 @@ func (ks *Keystore) Serialize() []byte  {
 	return append(streamdata,chksum...)
 }
 
-
-//SIDData map[string] *IDInfo
-//ChildrenNum	uint32
 func (hids *HIDS) Serialize() []byte {
 	var bsiddata []byte
 	var idnum uint32
@@ -112,9 +150,7 @@ func (hids *HIDS) Serialize() []byte {
 
 
 }
-//Identifier []byte
-//Credentials []EXTKeys
-//ChildrenNum uint32
+
 func (idinfo *IDInfo) Serialize() []byte {
 	credoffine := idinfo.Credentials[0].Serialize()
 	credoffinelen := uint32ToByte(uint32(len(credoffine)))
@@ -123,6 +159,7 @@ func (idinfo *IDInfo) Serialize() []byte {
 	return append(idinfo.Identifier, append(credoffinelen, append(credoffine, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
 }
 
+/*Four Keystore File Deserializing Functions: StringKeystore, DeserializeEXTKeys, DeserializeHIDS, DeserializeIDInfo*/
 
 // StringKeystore returns a Keystore struct given a base58-encoded string
 func StringKeystore(data string) (*Keystore,error) {
@@ -172,7 +209,7 @@ func StringKeystore(data string) (*Keystore,error) {
 	return &Keystore{seed, mk, mck, *iddata}, nil
 }
 
-// StringWallet returns a wallet given a base58-encoded extended key
+//DeserializeEXTKeys returns EXTKeys struct pointer -- a extended private keys given a base58-encoded extended key
 func DeserializeEXTKeys(extkeystr []byte) (*EXTKeys,error) {
 	vbytes := extkeystr[0:4]
 	depth := byteToUint16(extkeystr[4:5])
@@ -183,6 +220,7 @@ func DeserializeEXTKeys(extkeystr []byte) (*EXTKeys,error) {
 	return &EXTKeys{vbytes, depth, fingerprint, i, chaincode, key}, nil
 }
 
+//DeserializeHIDS returns HIDS struct pointer -- the entire identity struct given a []byte string
 func DeserializeHIDS(hids []byte) (*HIDS, error) {
 
 	var base uint32
@@ -214,6 +252,7 @@ func DeserializeHIDS(hids []byte) (*HIDS, error) {
 	return &HIDS{SIDData, index}, nil
 }
 
+//DeserializeIDInfo returns IDInfo struct pointer -- a single identity struct given a []byte string
 func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
 	//Get identifier
 	identifier := idinfostr[0:20]
@@ -241,43 +280,9 @@ func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
 
 }
 
-// Generate Single ID information
-func NewHIDS(index uint32, pathway string, childrenNum uint32, parentalEXTKeys *EXTKeys) *HIDS {
-	//String operation: turn m/0' into m/0'/childrenNum-1
-	childpathway := pathway + "/0"
 
-	SIDData := make(map[string] *IDInfo)
-	SIDData[childpathway] = NewIDInfo(index, parentalEXTKeys)
 
-	//Need to modify the number of children
-	return &HIDS{SIDData, childrenNum - 1}
-}
 
-//Using index number and the parental extended keys to encapsulate a single identity
-func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
-	// Offline extended private keys
-	childEXTPrivF, err := parentalEXTKeys.Child(index)
-	if err != nil {
-		fmt.Errorf("%s should have been nil",err.Error())
-	}
-	fmt.Printf("The New Offline ID extended private key is:\n%s\n", childEXTPrivF)
-	//Online extended private keys
-	childEXTPrivOn, err := parentalEXTKeys.Child(index + uint32(0x80000000))
-	if err != nil {
-		fmt.Errorf("%s should have been nil",err.Error())
-	}
-	fmt.Printf("The New Online ID extended private key is:\n%s\n", childEXTPrivOn)
-
-	// Convert the offline private key to public key and derive the identitifer
-	extpub := childEXTPrivF.Pub()
-	identifier := hash160(privToPub(extpub.Key))
-	fmt.Printf("The New ID identifier is:\n%d\n", identifier)
-
-	//Assembly the online and offline extended private keys
-	credentials := []EXTKeys{*childEXTPrivF, *childEXTPrivOn}
-
-	return &IDInfo{identifier, credentials, 0}
-}
 
 
 
