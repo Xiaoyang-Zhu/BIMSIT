@@ -128,9 +128,10 @@ func (idinfo *IDInfo) Serialize() []byte {
 func StringKeystore(data string) (*Keystore,error) {
 	//BASE58 Decoding and check checksum value
 	ks := base58.Decode(data)
-	if err := ByteCheck(ks); err != nil {
-		return &Keystore{}, err
-	}
+	//Best choice is adding the keystore file content check function
+//	if err := ByteCheck(ks); err != nil {
+//		return &Keystore{}, err
+//	}
 	if bytes.Compare(dblSha256(ks[:(len(ks)-4)])[:4], ks[(len(ks)-4):]) != 0 {
 		return &Keystore{}, errors.New("Invalid checksum")
 	}
@@ -142,12 +143,15 @@ func StringKeystore(data string) (*Keystore,error) {
 	//Obtain masterkey and masterchildkey
 	mklen := binary.BigEndian.Uint32(ks[4 + seedlen:8 + seedlen])
 	mkstr := ks[8 + seedlen:8 + seedlen + mklen]
-	mcklen := binary.BigEndian.Uint32(ks[8 + seedlen + mklen:16 + seedlen + mklen])
-	mckstr := ks[16 + seedlen + mklen:16 + seedlen + mklen + mcklen]
+	mcklen := binary.BigEndian.Uint32(ks[8 + seedlen + mklen:12 + seedlen + mklen])
+	mckstr := ks[12 + seedlen + mklen:12 + seedlen + mklen + mcklen]
 
 	//Obtain identity information string
-	iddatalen := binary.BigEndian.Uint32(ks[16 + seedlen + mklen + mcklen:24 + seedlen + mklen + mcklen])
-	iddatastr := ks[24 + seedlen + mklen + mcklen:24 + seedlen + mklen + mcklen + iddatalen]
+	iddatalen := binary.BigEndian.Uint32(ks[12 + seedlen + mklen + mcklen:16 + seedlen + mklen + mcklen])
+	iddatastr := ks[16 + seedlen + mklen + mcklen:16 + seedlen + mklen + mcklen + iddatalen]
+
+//	fmt.Printf("keystore is: \n%d\n seed is: \n%d\n masterkey is: \n%d\n masterkey child is:\n%d\n iddata is: \n%d\n", ks, seed, mkstr, mckstr, iddatastr)
+
 
 	mk, err := DeserializeEXTKeys(mkstr)
 	if err != nil {
@@ -199,13 +203,13 @@ func DeserializeHIDS(hids []byte) (*HIDS, error) {
 		//Convert []byte type pathway into pathway string
 		pathstr := string(pathstrb[:pathstrlen])
 		SIDData[pathstr] = idinfo
-		base = base + 16 + pathstrlen + idinfostrlen
+		base = base + 12 + pathstrlen + idinfostrlen
 
 		idnum--
 	}
 
 
-	index := binary.BigEndian.Uint32(hids[:4])
+	index := binary.BigEndian.Uint32(hids[base:4 + base])
 
 	return &HIDS{SIDData, index}, nil
 }
