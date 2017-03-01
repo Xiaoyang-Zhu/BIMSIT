@@ -65,21 +65,21 @@ func  NewKeystore(length uint16) *Keystore {
 	fmt.Printf("The master's  child m/0' private key is:\n%s\n", extpriv_masterchild)
 
 	//Build the root identity using offline pathway m/0'/0
-	idData := NewHIDS(0, "m/0'", 1, extpriv_masterchild)
+	idData := NewHIDS(0, "m/0'", 0, extpriv_masterchild)
 
 	return &Keystore{seed, extpriv_master, extpriv_masterchild, *idData}
 }
 
-// Generate Single ID information
+// Generate entire hierarchical ID information
 func NewHIDS(index uint32, pathway string, childrenNum uint32, parentalEXTKeys *EXTKeys) *HIDS {
 	//String operation: turn m/0' into m/0'/childrenNum-1
-	childpathway := pathway + "/0"
+	childpathway := fmt.Sprintf("%s/%d", pathway, childrenNum)
 
 	SIDData := make(map[string] *IDInfo)
 	SIDData[childpathway] = NewIDInfo(index, parentalEXTKeys)
 
 	//Need to modify the number of children
-	return &HIDS{SIDData, childrenNum - 1}
+	return &HIDS{SIDData, index + 1}
 }
 
 //Using index number and the parental extended keys to encapsulate a single identity
@@ -298,10 +298,15 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 	//Get parental identity information
 	pid := ks.idData.SIDData[parentalPath]
 
-	//Pass the parental identity info and get a new HIDS struct (Attention: need modify the parental children number)
-	idData := NewHIDS(ks.idData.index, parentalPath, pid.ChildrenNum, &pid.Credentials[0])
+	//String operation: turn m/0' into m/0'/childrenNum-1
+	childpathway := fmt.Sprintf("%s/%d", parentalPath, pid.ChildrenNum)
 
-	return &Keystore{ks.seed, ks.masterKeys, ks.masterChildKeys, *idData}, nil
+	//Pass the parental identity info, get a new IDInfo struct and put the string and struct into map
+	ks.idData.SIDData[childpathway] = NewIDInfo(ks.idData.index, &pid.Credentials[0])
+
+	pid.ChildrenNum ++
+
+	return &Keystore{ks.seed, ks.masterKeys, ks.masterChildKeys, ks.idData}, nil
 }
 
 

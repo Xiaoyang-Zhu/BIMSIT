@@ -48,6 +48,15 @@ func main() {
 		fmt.Println(newks.Serialize())
 		newks.ListAllIDPath()
 
+		//Test v2
+		new2ks, err:= newks.AddNewIDKeystore("m/0'/0")
+		if err != nil {
+			fmt.Println("Errors in AddNewIDKeystore")
+			return
+		}
+		fmt.Println(new2ks.Serialize())
+		new2ks.ListAllIDPath()
+
 	} else {
 		fmt.Printf("Cannot load the Keystore file!\n" + "Building a new one!\n")
 
