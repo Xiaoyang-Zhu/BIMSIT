@@ -39,6 +39,14 @@ func main() {
 		//List all identities tree-like structure and choose one as the parental identity
 		ks.ListAllIDPath()
 
+		//Pass a parental identity path and output the new keystore which comprises the identity
+		newks, err:= ks.AddNewIDKeystore("m/0'/0")
+		if err != nil {
+			fmt.Println("Errors in AddNewIDKeystore")
+			return
+		}
+		fmt.Println(newks.Serialize())
+		newks.ListAllIDPath()
 
 	} else {
 		fmt.Printf("Cannot load the Keystore file!\n" + "Building a new one!\n")

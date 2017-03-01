@@ -293,6 +293,16 @@ func (ks *Keystore) ListAllIDPath() {
 }
 
 
+func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
+
+	//Get parental identity information
+	pid := ks.idData.SIDData[parentalPath]
+
+	//Pass the parental identity info and get a new HIDS struct (Attention: need modify the parental children number)
+	idData := NewHIDS(ks.idData.index, parentalPath, pid.ChildrenNum, &pid.Credentials[0])
+
+	return &Keystore{ks.seed, ks.masterKeys, ks.masterChildKeys, *idData}, nil
+}
 
 
 
