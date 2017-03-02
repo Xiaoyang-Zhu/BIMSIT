@@ -56,6 +56,7 @@ func  NewKeystore(length uint16) *Keystore {
 	//Calculate the master key and obtain the master extended private keys from the seed
 	extpriv_master := MasterKey(seed)
 	fmt.Printf("The extended private key is:\n%s\n", extpriv_master)
+	fmt.Println(extpriv_master.Serialize())
 
 	//Derive the m/0' keys: the hardened model based on extended private keys number: 0x80000000
 	extpriv_masterchild, err := extpriv_master.Child(0)
@@ -63,6 +64,7 @@ func  NewKeystore(length uint16) *Keystore {
 		fmt.Errorf("%s should have been nil",err.Error())
 	}
 	fmt.Printf("The master's  child m/0' private key is:\n%s\n", extpriv_masterchild)
+	fmt.Println(extpriv_masterchild.Serialize())
 
 	//Build the root identity using offline pathway m/0'/0
 	idData := NewHIDS(0, "m/0'", 0, extpriv_masterchild)
@@ -79,7 +81,7 @@ func NewHIDS(index uint32, pathway string, childrenNum uint32, parentalEXTKeys *
 	SIDData[childpathway] = NewIDInfo(index, parentalEXTKeys)
 
 	//Need to modify the number of children
-	return &HIDS{SIDData, index + 1}
+	return &HIDS{SIDData, index}
 }
 
 //Using index number and the parental extended keys to encapsulate a single identity
@@ -90,12 +92,15 @@ func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
 		fmt.Errorf("%s should have been nil",err.Error())
 	}
 	fmt.Printf("The New Offline ID extended private key is:\n%s\n", childEXTPrivF)
+	fmt.Println(childEXTPrivF.Serialize())
+
 	//Online extended private keys
 	childEXTPrivOn, err := parentalEXTKeys.Child(index + uint32(0x80000000))
 	if err != nil {
 		fmt.Errorf("%s should have been nil",err.Error())
 	}
 	fmt.Printf("The New Online ID extended private key is:\n%s\n", childEXTPrivOn)
+	fmt.Println(childEXTPrivOn.Serialize())
 
 	// Convert the offline private key to public key and derive the identitifer
 	extpub := childEXTPrivF.Pub()
@@ -127,7 +132,7 @@ func (ks *Keystore) Serialize() []byte  {
 	idatalen := uint32ToByte(uint32(len(idata)))
 	fmt.Println("The bytes number of seed/masterkey/masterchildkey/idata:", seedlen, mklen, mcklen, idatalen)
 	streamdata := append(seedlen, append(ks.seed, append(mklen, append(mk, append(mcklen, append(mck, append(idatalen, idata...)...)...)...)...)...)...)
-//	streamdata := append(ks.seed, append(mk, append(mck, idata...)...)...)
+	//streamdata := append(ks.seed, append(mk, append(mck, idata...)...)...)
 	chksum := dblSha256(streamdata)[:4]
 	return append(streamdata,chksum...)
 }
@@ -142,8 +147,12 @@ func (hids *HIDS) Serialize() []byte {
 		bvalue := value.Serialize()
 		bvaluelen := uint32ToByte(uint32(len(bvalue)))
 		idnum = idnum + 1
-		bsiddata = append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
+		//Iterator
+		iter := append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
+
 	}
+	bsiddata = append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
+
 	bchildren := uint32ToByte(uint32(hids.index))
 
 	return append(bsiddata, bchildren...)
@@ -154,7 +163,7 @@ func (hids *HIDS) Serialize() []byte {
 func (idinfo *IDInfo) Serialize() []byte {
 	credoffine := idinfo.Credentials[0].Serialize()
 	credoffinelen := uint32ToByte(uint32(len(credoffine)))
-	credonline := idinfo.Credentials[0].Serialize()
+	credonline := idinfo.Credentials[1].Serialize()
 	credonlinelen := uint32ToByte(uint32(len(credonline)))
 	return append(idinfo.Identifier, append(credoffinelen, append(credoffine, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
 }
@@ -285,7 +294,7 @@ func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
 
 // String returns the base58-encoded string form of the keystore.
 func (ks *Keystore) ListAllIDPath() {
-	fmt.Println("Identities' path:\n")
+	fmt.Println("All identities' path:")
 	for key, _ := range ks.idData.SIDData {
 		fmt.Printf("%s\n", key)
 	}
@@ -297,6 +306,7 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 
 	//Get parental identity information
 	pid := ks.idData.SIDData[parentalPath]
+	fmt.Printf("The ID info is :\n%d\n", pid.Serialize())
 
 	//String operation: turn m/0' into m/0'/childrenNum-1
 	childpathway := fmt.Sprintf("%s/%d", parentalPath, pid.ChildrenNum)
@@ -310,6 +320,8 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 
 	//Recreate the parental identity and put the new value into the map
 	ks.idData.SIDData[parentalPath] = pid.ModifyChildNum()
+
+	fmt.Printf("The modified new keystore deserialized result is:\n%d\n", ks.idData)
 
 	return &Keystore{ks.seed, ks.masterKeys, ks.masterChildKeys, ks.idData}, nil
 }
