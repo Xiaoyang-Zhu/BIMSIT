@@ -302,11 +302,21 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 	childpathway := fmt.Sprintf("%s/%d", parentalPath, pid.ChildrenNum)
 
 	//Pass the parental identity info, get a new IDInfo struct and put the string and struct into map
+	fmt.Println(pid.Credentials)
 	ks.idData.SIDData[childpathway] = NewIDInfo(ks.idData.index, &pid.Credentials[0])
 
-	pid.ChildrenNum ++
+	//Increase the number of identities in HIDS
+	ks.idData.index ++
+
+	//Recreate the parental identity and put the new value into the map
+	ks.idData.SIDData[parentalPath] = pid.ModifyChildNum()
 
 	return &Keystore{ks.seed, ks.masterKeys, ks.masterChildKeys, ks.idData}, nil
+}
+
+//Modify the children number of parent
+func (sid *IDInfo) ModifyChildNum() *IDInfo {
+	return &IDInfo{sid.Identifier, sid.Credentials, sid.ChildrenNum + 1}
 }
 
 
