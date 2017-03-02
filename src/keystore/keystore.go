@@ -141,19 +141,17 @@ func (hids *HIDS) Serialize() []byte {
 	var bsiddata []byte
 	var idnum uint32
 	for key, value := range hids.SIDData {
-//		fmt.Printf("%d : %s\n", key, value)
+		fmt.Printf("%s : %d\n", key, value)
 		bkey := []byte(key)
 		bkeylen := uint32ToByte(uint32(len(bkey)))
 		bvalue := value.Serialize()
 		bvaluelen := uint32ToByte(uint32(len(bvalue)))
 		idnum = idnum + 1
-		//Iterator
-		iter := append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
-
+		bsiddata = append(bsiddata, append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)...)
 	}
-	bsiddata = append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
-
 	bchildren := uint32ToByte(uint32(hids.index))
+
+	fmt.Printf("The iterator value: \n%d\n", bsiddata)
 
 	return append(bsiddata, bchildren...)
 
@@ -161,11 +159,11 @@ func (hids *HIDS) Serialize() []byte {
 }
 
 func (idinfo *IDInfo) Serialize() []byte {
-	credoffine := idinfo.Credentials[0].Serialize()
-	credoffinelen := uint32ToByte(uint32(len(credoffine)))
+	credoffline := idinfo.Credentials[0].Serialize()
+	credofflinelen := uint32ToByte(uint32(len(credoffline)))
 	credonline := idinfo.Credentials[1].Serialize()
 	credonlinelen := uint32ToByte(uint32(len(credonline)))
-	return append(idinfo.Identifier, append(credoffinelen, append(credoffine, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
+	return append(idinfo.Identifier, append(credofflinelen, append(credoffline, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
 }
 
 /*Four Keystore File Deserializing Functions: StringKeystore, DeserializeEXTKeys, DeserializeHIDS, DeserializeIDInfo*/
