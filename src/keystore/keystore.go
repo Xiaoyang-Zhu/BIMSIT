@@ -8,14 +8,14 @@ import (
 	"encoding/binary"
 )
 
-/* Basic Struct Definition */
+// Basic Struct Definition
 
 //Single identity information
 type IDInfo struct {
 	Identifier []byte //160 bytes
 	Credentials []EXTKeys //The extended public or private keys: the first ExtKey is offline keys; the second is online
 	ChildrenNum	uint32
-//	Attributes []byte //Attributes
+	//	Attributes []byte //Attributes
 }
 
 //Entire FAKE tree structure of one identity
@@ -23,12 +23,12 @@ type IDInfo struct {
 type HIDS struct {
 	SIDData map[string] *IDInfo //string stands for the pathway of identity
 	index	uint32	//The number of identities derived from one seed
-//	description string
+	//	description string
 }
 
 //Identity information storage file encrypted by users' defined password: it's a secured vault of entire identity info
 type Keystore struct {
-//	secret string
+	//	secret string
 	seed []byte // Seed
 	masterKeys *EXTKeys //Master keys: the extended private keys <privKey, chaincode> serialized string 78 Bytes
 	masterChildKeys *EXTKeys //Master child keys: m/0' the extended private keys <privKey, chaincode> serialized string 78 Bytes
@@ -39,10 +39,10 @@ type Keystore struct {
 //Credentials in each IDInfo are composed by extended public keys rather than the extended private keys
 type OHIDS struct {
 	OSIDData map[string] IDInfo
-//	description string
+	//	description string
 }
 
-/* Three Keystore Struct Global Constructor: NewKeystore, NewHIDS and NewIDInfo*/
+// Three Keystore Struct Global Constructor: NewKeystore, NewHIDS and NewIDInfo
 
 func  NewKeystore(length uint16) *Keystore {
 
@@ -113,7 +113,7 @@ func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
 	return &IDInfo{identifier, credentials, 0}
 }
 
-/* Four Keystore Struct Serializing Functions: Converting keystore struct into string so that ID info could be stored in keystore file */
+// Four Keystore Struct Serializing Functions: Converting keystore struct into string so that ID info could be stored in keystore file
 
 // String returns the base58-encoded string form of the keystore.
 func (ks *Keystore) String() string  {
@@ -176,16 +176,12 @@ func (idinfo *IDInfo) Serialize() []byte {
 	//return append(idinfo.Identifier, append(credofflinelen, append(credoffline, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
 }
 
-/*Four Keystore File Deserializing Functions: StringKeystore, DeserializeEXTKeys, DeserializeHIDS, DeserializeIDInfo*/
+// Four Keystore File Deserializing Functions: StringKeystore, DeserializeEXTKeys, DeserializeHIDS, DeserializeIDInfo
 
 // StringKeystore returns a Keystore struct given a base58-encoded string
 func StringKeystore(data string) (*Keystore,error) {
 	//BASE58 Decoding and check checksum value
 	ks := base58.Decode(data)
-	//Best choice is adding the keystore file content check function
-//	if err := ByteCheck(ks); err != nil {
-//		return &Keystore{}, err
-//	}
 	if bytes.Compare(dblSha256(ks[:(len(ks)-4)])[:4], ks[(len(ks)-4):]) != 0 {
 		return &Keystore{}, errors.New("Invalid checksum")
 	}
@@ -204,7 +200,7 @@ func StringKeystore(data string) (*Keystore,error) {
 	iddatalen := binary.BigEndian.Uint32(ks[12 + seedlen + mklen + mcklen:16 + seedlen + mklen + mcklen])
 	iddatastr := ks[16 + seedlen + mklen + mcklen:16 + seedlen + mklen + mcklen + iddatalen]
 
-//	fmt.Printf("keystore is: \n%d\n seed is: \n%d\n masterkey is: \n%d\n masterkey child is:\n%d\n iddata is: \n%d\n", ks, seed, mkstr, mckstr, iddatastr)
+	//fmt.Printf("keystore is: \n%d\n seed is: \n%d\n masterkey is: \n%d\n masterkey child is:\n%d\n iddata is: \n%d\n", ks, seed, mkstr, mckstr, iddatastr)
 
 
 	mk, err := DeserializeEXTKeys(mkstr)
@@ -263,7 +259,6 @@ func DeserializeHIDS(hids []byte) (*HIDS, error) {
 		idnum--
 	}
 
-
 	index := binary.BigEndian.Uint32(hids[base:4 + base])
 
 	return &HIDS{SIDData, index}, nil
@@ -298,7 +293,7 @@ func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
 }
 
 
-/* Keystore Struct Operation Functions */
+// Keystore Struct Operation Functions
 
 // String returns the base58-encoded string form of the keystore.
 func (ks *Keystore) ListAllIDPath() {
@@ -309,7 +304,7 @@ func (ks *Keystore) ListAllIDPath() {
 	return
 }
 
-
+// AddNewIDKeystore return a new Keystore struct given one parent path like "m/0'/0"
 func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 
 	//Get parental identity information
@@ -334,7 +329,7 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 	return &Keystore{ks.seed, ks.masterKeys, ks.masterChildKeys, ks.idData}, nil
 }
 
-//Modify the children number of parent
+// Modify the children number of parent
 func (sid *IDInfo) ModifyChildNum() *IDInfo {
 	return &IDInfo{sid.Identifier, sid.Credentials, sid.ChildrenNum + 1}
 }
