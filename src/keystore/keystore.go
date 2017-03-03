@@ -74,7 +74,7 @@ func  NewKeystore(length uint16) *Keystore {
 
 // Generate entire hierarchical ID information
 func NewHIDS(index uint32, pathway string, childrenNum uint32, parentalEXTKeys *EXTKeys) *HIDS {
-	//String operation: turn m/0' into m/0'/childrenNum-1
+	//String operation: turn m/0' into m/0'/childrenNum
 	childpathway := fmt.Sprintf("%s/%d", pathway, childrenNum)
 
 	SIDData := make(map[string] *IDInfo)
@@ -145,25 +145,35 @@ func (hids *HIDS) Serialize() []byte {
 		bkey := []byte(key)
 		bkeylen := uint32ToByte(uint32(len(bkey)))
 		bvalue := value.Serialize()
+		fmt.Printf("The IDInfo binary value: \n%d\n", bvalue)
 		bvaluelen := uint32ToByte(uint32(len(bvalue)))
 		idnum = idnum + 1
-		bsiddata = append(bsiddata, append(uint32ToByte(idnum), append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)...)
+		bsiddata = append(bsiddata, append(bkeylen, append(bkey, append(bvaluelen, bvalue...)...)...)...)
 	}
-	bchildren := uint32ToByte(uint32(hids.index))
+	index := uint32ToByte(uint32(hids.index))
 
 	fmt.Printf("The iterator value: \n%d\n", bsiddata)
 
-	return append(bsiddata, bchildren...)
+	return append(uint32ToByte(idnum), append(bsiddata, index...)...)
 
 
 }
 
 func (idinfo *IDInfo) Serialize() []byte {
-	credoffline := idinfo.Credentials[0].Serialize()
-	credofflinelen := uint32ToByte(uint32(len(credoffline)))
-	credonline := idinfo.Credentials[1].Serialize()
-	credonlinelen := uint32ToByte(uint32(len(credonline)))
-	return append(idinfo.Identifier, append(credofflinelen, append(credoffline, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
+	var IDstr []byte
+	for _, value := range idinfo.Credentials {
+		cred := value.Serialize()
+		credlen := uint32ToByte(uint32(len(cred)))
+		IDstr = append(IDstr, append(credlen, cred...)...)
+	}
+
+	return append(idinfo.Identifier, append(IDstr, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)
+
+	//credoffline := idinfo.Credentials[0].Serialize()
+	//credofflinelen := uint32ToByte(uint32(len(credoffline)))
+	//credonline := idinfo.Credentials[1].Serialize()
+	//credonlinelen := uint32ToByte(uint32(len(credonline)))
+	//return append(idinfo.Identifier, append(credofflinelen, append(credoffline, append(credonlinelen, append(credonline, uint32ToByte(uint32(idinfo.ChildrenNum))...)...)...)...)...)
 }
 
 /*Four Keystore File Deserializing Functions: StringKeystore, DeserializeEXTKeys, DeserializeHIDS, DeserializeIDInfo*/
@@ -306,7 +316,7 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 	pid := ks.idData.SIDData[parentalPath]
 	fmt.Printf("The ID info is :\n%d\n", pid.Serialize())
 
-	//String operation: turn m/0' into m/0'/childrenNum-1
+	//String operation: turn m/0' into m/0'/childrenNum
 	childpathway := fmt.Sprintf("%s/%d", parentalPath, pid.ChildrenNum)
 
 	//Pass the parental identity info, get a new IDInfo struct and put the string and struct into map
