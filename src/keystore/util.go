@@ -2,12 +2,13 @@ package keystore
 
 import (
     "crypto/sha256"
-    "golang.org/x/crypto/ripemd160"
     "encoding/binary"
     "encoding/hex"
-    "btcsuite/btcd/btcec"
     "math/big"
-    )
+
+    "github.com/btcsuite/btcd/btcec"
+    "golang.org/x/crypto/ripemd160"
+)
 
 var curve *btcec.KoblitzCurve = btcec.S256()
 

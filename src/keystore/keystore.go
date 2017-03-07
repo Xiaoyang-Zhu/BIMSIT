@@ -2,10 +2,11 @@ package keystore
 
 import (
 	"fmt"
-	"btcsuite/btcutil/base58"
 	"bytes"
 	"errors"
 	"encoding/binary"
+
+	"github.com/btcsuite/btcutil/base58"
 )
 
 // Basic Struct Definition

@@ -8,7 +8,8 @@ import (
     "encoding/hex"
     "errors"
     "math/big"
-    "btcsuite/btcutil/base58"
+
+    "github.com/btcsuite/btcutil/base58"
     )
 
 var (
