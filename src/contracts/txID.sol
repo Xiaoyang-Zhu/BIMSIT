@@ -1,7 +1,7 @@
 pragma solidity ^0.4.0;
 
 
-contract txID {
+contract txReg {
 
     address public owner;
 
@@ -17,6 +17,7 @@ contract txID {
 
     //Initialization Function: establish the identity contracts using identity information delivered by HID generation
     function txReg(address rootID, bytes rootPKf, bytes rootPKo, bytes sig, bytes rootPointer) {
+
         //transafer the money then conduct the following operations
         owner = msg.sender;
 

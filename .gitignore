@@ -40,3 +40,8 @@ Would skip repository src/github.com/tools/godep
 src/contracts/token.go
 
 src/contracts/token.sol
+src/github.com/ethereum/.DS_Store
+src/github.com/tools/.DS_Store
+src/github.com/.DS_Store
+
+src/golang.org/x/crypto/pkcs12

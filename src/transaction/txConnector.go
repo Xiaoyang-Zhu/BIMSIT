@@ -22,7 +22,7 @@ func TxRegConn(rootID, rootPKf, rootPKo, sig, rootPointer []byte) (string, error
 	}
 
 	// Instantiate the contract
-	id, err := contracts.NewTxID(common.BytesToAddress(rootID), conn)
+	_, err = contracts.NewTxReg(common.BytesToAddress(rootID), conn)
 	if err != nil {
 		log.Fatalf("Failed to instantiate a ID transaction contract: %v", err)
 	}
@@ -33,15 +33,15 @@ func TxRegConn(rootID, rootPKf, rootPKo, sig, rootPointer []byte) (string, error
 		log.Fatalf("Failed to create authorized transactor: %v", err)
 	}
 
-	// Identity contracts constructor
-	_, err = id.TxReg(auth, common.BytesToAddress(rootID), rootPKf, rootPKo, sig, rootPointer)
-	if err != nil {
-		log.Fatalf("Failed to register the identity: %v", err)
-	}
+	//// Identity contracts constructor
+	//_, err = id.TxReg(auth, common.BytesToAddress(rootID), rootPKf, rootPKo, sig, rootPointer)
+	//if err != nil {
+	//	log.Fatalf("Failed to register the identity: %v", err)
+	//}
 
 	// Deploy the new identity contract
 	// new(big.Int), "Contracts in Go!!!", 0, "Go!")
-	address, tx, tx_identifier, err := contracts.DeployTxID(auth, conn)
+	address, tx, tx_identifier, err := contracts.DeployTxReg(auth, conn, common.BytesToAddress(rootID), rootPKf, rootPKo, sig, rootPointer)
 	if err != nil {
 		log.Fatalf("Failed to deploy new identity contract: %v", err)
 	}

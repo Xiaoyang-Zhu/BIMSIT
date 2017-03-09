@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"io/ioutil"
+	"log"
 )
 
 
@@ -48,23 +49,35 @@ func main() {
 	} else {
 		fmt.Printf("Cannot load the Keystore file!\n" + "Building a new one!\n")
 
-		//Fetch the seed length from client then generate the seed: assuming length is 256 bits
+		// Fetch the seed length from client then generate the seed: assuming length is 256 bits
 		ks := keystore.NewKeystore(256) //256 bits: 32 bytes
 
-		//check the content of the generated keystore
+		// Check the content of the generated keystore
 		fmt.Printf("The new raw keystore\n%d\n", *ks)
 		fmt.Printf("The serialized keystore\n%d\n", ks.Serialize())
-		//serialize the keystore struct
+		// Serialize the keystore struct
 		fmt.Printf("The string format serialized Keystore:\n%s\n", ks)
 
-		//Write into a keystore file
+		// Write into a keystore file
 		err := ioutil.WriteFile("./keystore.data", []byte(ks.String()), 0644)
 		if err != nil {
 			fmt.Println("Errors in writing file")
 			return
 		}
 
-		tx_str, err := transaction.TxRegConn()
+		// Prepare data for identity registration process for smart contract
+		rootID, rootPKf, rootPKo, err := ks.GetRootIDInfo()
+		if err != nil {
+			log.Fatalf("Failed to get the root identity information: %v", err)
+			return
+		}
+
+		//Fake signature and pointer for prototyping
+		rootPointer := rootID
+			sig := rootID
+
+		// Pass the value and deploy the contract
+		tx_str, err := transaction.TxRegConn(rootID, rootPKf, rootPKo, sig, rootPointer)
 		if err != nil {
 			fmt.Println("Errors in identity registration process")
 			return

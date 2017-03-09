@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 
 	"github.com/btcsuite/btcutil/base58"
+	"log"
 )
 
 // Basic Struct Definition
@@ -333,6 +334,23 @@ func (ks *Keystore) AddNewIDKeystore(parentalPath string) (*Keystore, error) {
 // Modify the children number of parent
 func (sid *IDInfo) ModifyChildNum() *IDInfo {
 	return &IDInfo{sid.Identifier, sid.Credentials, sid.ChildrenNum + 1}
+}
+
+// GetRootIDInfo returns root identity information to construct the identity smart contract.
+func (ks *Keystore) GetRootIDInfo() (rootID, rootPKf, rootPKo []byte, err error) {
+	rootID = ks.idData.SIDData["m/0'/0"].Identifier
+	for counter, value := range ks.idData.SIDData["m/0'/0"].Credentials {
+		if counter == 0 {
+			rootPKf = value.Pub().Key
+		} else if counter == 1 {
+			rootPKo = value.Pub().Key
+		} else {
+			log.Fatalln("Has more than two credential keys")
+			return
+		}
+	}
+
+	return rootID, rootPKf, rootPKo, nil
 }
 
 
