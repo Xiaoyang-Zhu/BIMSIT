@@ -1,7 +1,11 @@
 package main
 
+//go:generate abigen -sol ../contracts/txID.sol -pkg contracts -out ../contracts/txID.go
+
+
 import (
 	"keystore"
+	"transaction"
 	"fmt"
 	"os"
 	"io/ioutil"
@@ -60,7 +64,17 @@ func main() {
 			return
 		}
 
+		tx_str, err := transaction.TxRegConn()
+		if err != nil {
+			fmt.Println("Errors in identity registration process")
+			return
+		}
+
+		fmt.Println(tx_str)
+
 	}
+
+
 
 	defer inputFile.Close()
 

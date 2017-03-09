@@ -18,4 +18,25 @@ keystore.data
 *.a
 
 bin/godep
-github.com/*
+src/github.com/*
+src/golang.org/*
+
+src/github.com/btcsuite/btcd/
+
+src/github.com/btcsuite/btcutil/
+
+src/github.com/ethereum/go-ethereum/
+
+src/github.com/tools/godep/
+.idea/inspectionProfiles/
+.idea/libraries/
+bin/
+pkg/
+Would skip repository src/github.com/btcsuite/btcd
+Would skip repository src/github.com/btcsuite/btcutil
+Would skip repository src/github.com/ethereum/go-ethereum
+Would skip repository src/github.com/tools/godep
+
+src/contracts/token.go
+
+src/contracts/token.sol
