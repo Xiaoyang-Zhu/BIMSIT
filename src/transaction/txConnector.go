@@ -11,7 +11,7 @@ import(
 	"fmt"
 )
 
-const key = `{"address":"f2759b4a699dae4fdc3383a0d7a92cfc246315cd","crypto":{"cipher":"aes-128-ctr","ciphertext":"a96fe235356c7ebe6520d2fa1dcc0fd67199cb490fb18c39ffabbb6880a6b3d6","cipherparams":{"iv":"47182104a4811f8da09c0bafc3743e2a"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"81c82f97edb0ee1036e63d1de57b7851271273971803e60a5cbb011e85baa251"},"mac":"09f107c9af8efcb932354d939beb7b2c0cebcfd70362d68905de554304a7cfff"},"id":"eb7ed04f-e996-4bda-893b-28dc6ac24626","version":3}`
+const key = `{"address":"5b824da66f06be2af5e99b070308cef7294adf9b","crypto":{"cipher":"aes-128-ctr","ciphertext":"98f3bd201e601d0eb71defd32639d715de8384b3647f1324f368e61e583d7abd","cipherparams":{"iv":"53388169c2a04012926c6c6cc9e960b7"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"4cb374e6c77edfed3b8b2cbeeaba03c05a4603986f300f3f14378e8555f3cab4"},"mac":"f1f22578415c55a7335670cb53341f8e40bec5a217f392f365ef41ae15e54808"},"id":"114aa052-3b05-4ba8-a41a-d60a59ade246","version":3}`
 
 func TxRegConn(rootID, rootPKf, rootPKo, sig, rootPointer []byte) (string, error)  {
 
@@ -32,12 +32,6 @@ func TxRegConn(rootID, rootPKf, rootPKo, sig, rootPointer []byte) (string, error
 	if err != nil {
 		log.Fatalf("Failed to create authorized transactor: %v", err)
 	}
-
-	//// Identity contracts constructor
-	//_, err = id.TxReg(auth, common.BytesToAddress(rootID), rootPKf, rootPKo, sig, rootPointer)
-	//if err != nil {
-	//	log.Fatalf("Failed to register the identity: %v", err)
-	//}
 
 	// Deploy the new identity contract
 	// new(big.Int), "Contracts in Go!!!", 0, "Go!")

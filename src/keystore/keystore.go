@@ -108,6 +108,7 @@ func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
 	extpub := childEXTPrivF.Pub()
 	identifier := hash160(privToPub(extpub.Key))
 	fmt.Printf("The New ID identifier is:\n%d\n", identifier)
+	fmt.Printf("The New ID identifier string is:\n%x\n", identifier)
 
 	//Assembly the online and offline extended private keys
 	credentials := []EXTKeys{*childEXTPrivF, *childEXTPrivOn}
