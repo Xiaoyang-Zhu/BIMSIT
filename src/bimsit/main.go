@@ -25,7 +25,7 @@ func main() {
 		//Read the keystore file
 		data, err := ioutil.ReadFile("./keystore.data")
 		if err != nil {
-			fmt.Println("Errors in reading file")
+			log.Fatalln("Errors in reading file")
 			return
 		}
 		fmt.Printf("The keystore content string is: \n%s\n", string(data))
@@ -34,7 +34,7 @@ func main() {
 		//func StringKeystore(data string) (*Keystore,error)
 		ks, err := keystore.StringKeystore(string(data))
 		if err != nil {
-			fmt.Println("Errors in StringKeystore")
+			log.Fatalln("Errors in StringKeystore")
 			return
 		}
 		fmt.Printf("The serialized keystore struct data: \n%d\n", ks.Serialize())
@@ -61,7 +61,7 @@ func main() {
 		// Write into a keystore file
 		err := ioutil.WriteFile("./keystore.data", []byte(ks.String()), 0644)
 		if err != nil {
-			fmt.Println("Errors in writing file")
+			log.Fatalln("Errors in writing file")
 			return
 		}
 
@@ -79,7 +79,7 @@ func main() {
 		// Pass the value and deploy the contract
 		tx_str, err := transaction.TxRegConn(rootID, rootPKf, rootPKo, sig, rootPointer)
 		if err != nil {
-			fmt.Println("Errors in identity registration process")
+			log.Fatalln("Errors in identity registration process")
 			return
 		}
 

@@ -50,7 +50,7 @@ func  NewKeystore(length uint16) *Keystore {
 
 	seed, err := GenSeed(length)
 	if err != nil {
-		fmt.Errorf("%s should have been nil",err.Error())
+		log.Fatalf("%s should have been nil",err.Error())
 	}
 
 	fmt.Printf("The seed is:\n%d\n", seed)
@@ -63,7 +63,7 @@ func  NewKeystore(length uint16) *Keystore {
 	//Derive the m/0' keys: the hardened model based on extended private keys number: 0x80000000
 	extpriv_masterchild, err := extpriv_master.Child(0)
 	if err != nil {
-		fmt.Errorf("%s should have been nil",err.Error())
+		log.Fatalf("%s should have been nil",err.Error())
 	}
 	fmt.Printf("The master's  child m/0' private key is:\n%s\n", extpriv_masterchild)
 	fmt.Println(extpriv_masterchild.Serialize())
@@ -91,7 +91,7 @@ func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
 	// Offline extended private keys
 	childEXTPrivF, err := parentalEXTKeys.Child(index)
 	if err != nil {
-		fmt.Errorf("%s should have been nil",err.Error())
+		log.Fatalf("%s should have been nil",err.Error())
 	}
 	fmt.Printf("The New Offline ID extended private key is:\n%s\n", childEXTPrivF)
 	fmt.Println(childEXTPrivF.Serialize())
@@ -99,7 +99,7 @@ func NewIDInfo(index uint32,parentalEXTKeys *EXTKeys) *IDInfo {
 	//Online extended private keys
 	childEXTPrivOn, err := parentalEXTKeys.Child(index + uint32(0x80000000))
 	if err != nil {
-		fmt.Errorf("%s should have been nil",err.Error())
+		log.Fatalf("%s should have been nil",err.Error())
 	}
 	fmt.Printf("The New Online ID extended private key is:\n%s\n", childEXTPrivOn)
 	fmt.Println(childEXTPrivOn.Serialize())
@@ -208,18 +208,18 @@ func StringKeystore(data string) (*Keystore,error) {
 
 	mk, err := DeserializeEXTKeys(mkstr)
 	if err != nil {
-		fmt.Println("Errors in analyzing master keys")
+		log.Fatalln("Errors in analyzing master keys")
 		return &Keystore{}, err
 	}
 	mck, err := DeserializeEXTKeys(mckstr)
 	if err != nil {
-		fmt.Println("Errors in analyzing master child keys")
+		log.Fatalln("Errors in analyzing master child keys")
 		return &Keystore{}, err
 	}
 
 	iddata, err := DeserializeHIDS(iddatastr)
 	if err != nil {
-		fmt.Println("Errors in analyzing HIDS struct")
+		log.Fatalln("Errors in analyzing HIDS struct")
 		return &Keystore{}, err
 	}
 	return &Keystore{seed, mk, mck, *iddata}, nil
@@ -250,7 +250,7 @@ func DeserializeHIDS(hids []byte) (*HIDS, error) {
 		idinfostr := hids[12 + pathstrlen + base: 12 + pathstrlen + idinfostrlen + base]
 		idinfo, err := DeserializeIDInfo(idinfostr)
 		if err != nil {
-			fmt.Println("Errors in analyzing identity structure")
+			log.Fatalln("Errors in analyzing identity structure")
 			return &HIDS{}, err
 		}
 
@@ -277,14 +277,14 @@ func DeserializeIDInfo(idinfostr []byte) (*IDInfo,error) {
 	credofflinestr := idinfostr[24:24 + credofflinelen]
 	credoffline, err := DeserializeEXTKeys(credofflinestr)
 	if err != nil {
-		fmt.Println("Errors in analyzing master child keys")
+		log.Fatalln("Errors in analyzing master child keys")
 		return &IDInfo{}, err
 	}
 	credonlinelen := binary.BigEndian.Uint32(idinfostr[24 + credofflinelen:28 + credofflinelen])
 	credonlinestr := idinfostr[28 + credofflinelen:28 + credofflinelen + credonlinelen]
 	credonline, err := DeserializeEXTKeys(credonlinestr)
 	if err != nil {
-		fmt.Println("Errors in analyzing master child keys")
+		log.Fatalln("Errors in analyzing master child keys")
 		return &IDInfo{}, err
 	}
 	//Get children number
